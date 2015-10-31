@@ -26,6 +26,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -36,7 +37,11 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Activity for scanning and displaying available Bluetooth LE devices.
@@ -170,22 +175,17 @@ public class DeviceScanActivity extends ListActivity {
                 @Override
                 public void run() {
                     mScanning = false;
-
-//
-                    mBluetoothAdapter.stopLeScan(mLeScanCallback);
-//                    depreciated API 21
-
-                    invalidateOptionsMenu();
+                    mBluetoothAdapter.stopLeScan(mLeScanCallback);// depreciated API 21
+                    invalidateOptionsMenu(); // => SCAN
                 }
-            }, SCAN_PERIOD);
-
+            }, SCAN_PERIOD);// 預設 SCAN 十秒
             mScanning = true;
             mBluetoothAdapter.startLeScan(mLeScanCallback);
-        } else {
+        } else { // 如果按的是 STOP
             mScanning = false;
-            mBluetoothAdapter.stopLeScan(mLeScanCallback);
+            mBluetoothAdapter.stopLeScan(mLeScanCallback); //畫面會停在SCAN了多少個算多少個
         }
-        invalidateOptionsMenu();
+        invalidateOptionsMenu(); //
     }
 
     // Adapter for holding devices found through scanning.
@@ -259,12 +259,58 @@ public class DeviceScanActivity extends ListActivity {
             new BluetoothAdapter.LeScanCallback() {
 
         @Override
-        public void onLeScan(final BluetoothDevice device, int rssi, byte[] scanRecord) {
+        public void onLeScan(final BluetoothDevice device, int rssi, final byte[] scanRecord) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    mLeDeviceListAdapter.addDevice(device);
-                    mLeDeviceListAdapter.notifyDataSetChanged();
+//                    Log.d("markchen"," 這裡是要加device"+ device+" 同時有 rssi 和 scanRecord");
+//                    Log.d("markchen","  scanRecord is "+ scanRecord.toString());
+//                    Log.d("markchen","  scanRecord size is "+ scanRecord.length);
+
+                    byte b;
+                    StringBuilder sb=new StringBuilder();
+                    for (int i=0;i<scanRecord.length;i++){
+                        b=scanRecord[i];
+//                        Log.d("markchen","  i="+ i+" "+b+" "+ String.format("%3d %02X  ", b,b));
+                        sb.append(String.format("%02X ", b));
+                    }
+                    Log.d("markchen","  scanRec is "+sb.toString());
+
+                    byte[] scanRecordBeaconType=new byte[9];
+                    System.arraycopy(scanRecord,0,scanRecordBeaconType,0,9);
+
+
+
+
+              //      02 01 06 1a ff 4c 00 02 15  # Apple's fixed iBeacon advertising prefix
+                    String strIBeaconPrefix="0201061aff4c000215";
+                    Hex hex=new Hex() ;
+                    byte[] bytesIBeacon= new byte[9];
+                    try {
+                        bytesIBeacon = hex.decodeHex(strIBeaconPrefix.toCharArray());
+
+                    } catch (DecoderException e) {
+                        e.printStackTrace();
+                    }
+                    // byte b;
+                    StringBuilder sb2=new StringBuilder();
+                    for (int i=0;i<bytesIBeacon.length;i++){
+                        b=bytesIBeacon[i];
+//                        Log.d("markchen", "bytesIBeacon  i=" + i + " " + b + " " + String.format("%3d %02X  ", b,b));
+                        sb2.append(String.format("%02X ", b));
+                    }
+//                    Log.d("markchen","  bytesIBeacon ==> "+sb2.toString());
+
+                   if ( Arrays.equals(scanRecordBeaconType,bytesIBeacon)){
+                       Log.d("markchen","  Is iBeacon ==>  yes ***************");
+                       mLeDeviceListAdapter.addDevice(device);
+                       mLeDeviceListAdapter.notifyDataSetChanged();
+
+                   }else{
+                       Log.d("markchen","  Is iBeacon ==>  NO !!!!!!!!");
+
+                   }
+
                 }
             });
         }
