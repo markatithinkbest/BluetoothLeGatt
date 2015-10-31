@@ -81,15 +81,15 @@ public class DeviceScanActivity extends ListActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main, menu);
-        if (!mScanning) {
-            menu.findItem(R.id.menu_stop).setVisible(false);
-            menu.findItem(R.id.menu_scan).setVisible(true);
+        if (!mScanning) { // 如果不是正在 Scan
+            menu.findItem(R.id.menu_stop).setVisible(false); // 看不到 STOP
+            menu.findItem(R.id.menu_scan).setVisible(true);  // 可以開始 SCAN
             menu.findItem(R.id.menu_refresh).setActionView(null);
-        } else {
-            menu.findItem(R.id.menu_stop).setVisible(true);
+        } else { // 正在 SCAN
+            menu.findItem(R.id.menu_stop).setVisible(true);   // 可以 STOP
             menu.findItem(R.id.menu_scan).setVisible(false);
             menu.findItem(R.id.menu_refresh).setActionView(
-                    R.layout.actionbar_indeterminate_progress);
+                    R.layout.actionbar_indeterminate_progress); // 轉轉轉
         }
         return true;
     }
@@ -97,12 +97,17 @@ public class DeviceScanActivity extends ListActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.menu_scan:
-                mLeDeviceListAdapter.clear();
+            case R.id.menu_scan: // 如果按的是 SCAN
+                mLeDeviceListAdapter.clear(); // 因為這個 clear()
+                                                //  畫面的資料先全部消失
                 scanLeDevice(true);
                 break;
             case R.id.menu_stop:
                 scanLeDevice(false);
+                // Mark??? 10/31/2015
+                // 不要執行scanLeDevice就好了
+                //  為什麼要設計成調用一個不執行的function?
+
                 break;
         }
         return true;
@@ -165,7 +170,11 @@ public class DeviceScanActivity extends ListActivity {
                 @Override
                 public void run() {
                     mScanning = false;
+
+//
                     mBluetoothAdapter.stopLeScan(mLeScanCallback);
+//                    depreciated API 21
+
                     invalidateOptionsMenu();
                 }
             }, SCAN_PERIOD);
